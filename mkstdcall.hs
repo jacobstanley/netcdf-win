@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -9,13 +10,28 @@ import Language.C.Data.Ident (Ident(..))
 import Language.C.System.GCC
 import Data.Maybe (catMaybes, listToMaybe, mapMaybe)
 import Data.List (isPrefixOf)
-
+import System.Console.CmdArgs hiding (name)
 
 ------------------------------------------------------------------------
 
+data MkStdcall = MkStdcall
+    { path :: FilePath
+    } deriving (Data, Typeable, Show)
+
+defaultArgs :: MkStdcall
+defaultArgs = MkStdcall
+    { path = "netcdf.h" &= args &= typ "PATH"
+    } &=
+    help "Create stdcall wrappers for a C header file" &=
+    summary "mkstdcall v0.1" &=
+    details [ "To create stdcall wrappers, pass the path to a header file:"
+            , "  mkstdcall ../netcdf-4.1.3/include/netcdf.h"
+            ]
+
 main :: IO ()
 main = do
-    (CTranslUnit extDecls _) <- parseFile "netcdf.h"
+    args <- cmdArgs defaultArgs
+    (CTranslUnit extDecls _) <- parseFile (path args)
     mapM_ print'
         $ map ncsPrefix
         $ map wrapWithStdcall
@@ -165,13 +181,13 @@ instance Rename CExtDecl where
     rename _ asm           = asm
 
 ------------------------------------------------------------------------
--- Scrap Your Boilerplat
+-- Scrap Your Boilerplate
 
 gany :: forall a b. (Typeable a, Data b) => (a -> Bool) -> b -> Bool
 gany p = everything (||) (False `mkQ` p)
 
 ------------------------------------------------------------------------
--- Pretty Printing
+-- Parsing / Pretty Printing
 
 parseFile :: String -> IO CTranslUnit
 parseFile path = do
