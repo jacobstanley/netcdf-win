@@ -1,9 +1,8 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 import Data.Generics
-import Control.Monad (guard)
 import Control.Applicative ((<$>))
 import Language.C
 import Language.C.Data.Ident (Ident(..))
@@ -11,10 +10,8 @@ import Language.C.System.GCC
 import Data.Maybe (catMaybes, listToMaybe, mapMaybe)
 import Data.List (isPrefixOf)
 
--- OverloadedStrings
-import GHC.Exts (IsString(..))
 
-import Debug.Trace (trace)
+------------------------------------------------------------------------
 
 main :: IO ()
 main = do
@@ -33,10 +30,7 @@ main = do
 
 ------------------------------------------------------------------------
 
-decl :: CExtDecl -> Maybe CDecl
-decl (CDeclExt x) = Just x
-decl _            = Nothing
-
+-- | Wraps any function declarations with stdcall function definitions
 wrapWithStdcall :: CExtDecl -> CExtDecl
 wrapWithStdcall orig@(CDeclExt d) = maybe orig CFDefExt (wrapWithStdcallD d)
 wrapWithStdcall x                 = x
@@ -92,16 +86,10 @@ call' :: CExpr -> [CExpr] -> CExpr
 call' fun args = CCall fun args undefNode
 
 var :: String -> CExpr
-var name = CVar (ident name) undefNode
+var nam = CVar (ident nam) undefNode
 
 ident :: String -> Ident
-ident name = Ident name 0 undefNode
-
-instance IsString CExpr where
-    fromString = var
-
-instance IsString Ident where
-    fromString = ident
+ident nam = Ident nam 0 undefNode
 
 ------------------------------------------------------------------------
 -- Exported Functions / Calling Conventions
@@ -158,10 +146,10 @@ class Rename a where
     rename :: (String -> String) -> a -> a
 
 instance Rename Ident where
-    rename f (Ident name h n) = Ident (f name) h n
+    rename f (Ident nam h n) = Ident (f nam) h n
 
 instance Rename CDeclr where
-    rename f (CDeclr ident d t a n) = CDeclr (rename f <$> ident) d t a n
+    rename f (CDeclr idnt d t a n) = CDeclr (rename f <$> idnt) d t a n
 
 instance Rename CDecl where
     rename f (CDecl ss ds n) = CDecl ss (map go ds) n
@@ -179,14 +167,15 @@ instance Rename CExtDecl where
 ------------------------------------------------------------------------
 -- Scrap Your Boilerplat
 
+gany :: forall a b. (Typeable a, Data b) => (a -> Bool) -> b -> Bool
 gany p = everything (||) (False `mkQ` p)
 
 ------------------------------------------------------------------------
 -- Pretty Printing
 
 parseFile :: String -> IO CTranslUnit
-parseFile name = do
-    result <- parseCFile (newGCC "gcc") Nothing [] name
+parseFile path = do
+    result <- parseCFile (newGCC "gcc") Nothing [] path
     case result of
         Left msg  -> error (show msg)
         Right ast -> return ast
