@@ -46,9 +46,7 @@ main = do
 
   where
     -- Prefixes the function with ncs_ instead of nc_.
-    -- The extra underscore at the start is to achieve the
-    -- name mangling windows expects for a stdcall function
-    ncsPrefix = rename $ ("_ncs" ++) . drop 2
+    ncsPrefix = rename $ ("ncs" ++) . drop 2
 
     shouldWrap :: [String] -> String -> Bool
     shouldWrap exs fn = "nc_" `isPrefixOf` fn && not (fn `elem` exs)
