@@ -11,16 +11,19 @@ import Language.C.System.GCC
 import Data.Maybe (catMaybes, listToMaybe, mapMaybe)
 import Data.List (isPrefixOf)
 import System.Console.CmdArgs hiding (name)
+import System.IO (IOMode(..), withFile, hGetContents)
 
 ------------------------------------------------------------------------
 
 data MkStdcall = MkStdcall
     { path :: FilePath
+    , exclude :: FilePath
     } deriving (Data, Typeable, Show)
 
 defaultArgs :: MkStdcall
 defaultArgs = MkStdcall
-    { path = "netcdf.h" &= args &= typ "PATH"
+    { path    = "netcdf.h"      &= typ "PATH" &= args
+    , exclude = "netcdf.ignore" &= typ "PATH" &= help "File containing functions to exclude"
     } &=
     help "Create stdcall wrappers for a C header file" &=
     summary "mkstdcall v0.1" &=
@@ -31,17 +34,24 @@ defaultArgs = MkStdcall
 main :: IO ()
 main = do
     args <- cmdArgs defaultArgs
+    exclusions <- lines <$> readFile (exclude args)
     (CTranslUnit extDecls _) <- parseFile (path args)
+    putStrLn "#include \"netcdf.h\""
     mapM_ print'
         $ map ncsPrefix
         $ map wrapWithStdcall
         $ filter (not . isVariadic)
-        $ filter (maybe False ("nc_" `isPrefixOf`) . name)
+        $ filter (maybe False (shouldWrap exclusions) . name)
         $ filter isExtern extDecls
 
   where
-    -- prefixes the function with ncs_ instead of nc_
-    ncsPrefix = rename $ ("ncs" ++) . drop 2
+    -- Prefixes the function with ncs_ instead of nc_.
+    -- The extra underscore at the start is to achieve the
+    -- name mangling windows expects for a stdcall function
+    ncsPrefix = rename $ ("_ncs" ++) . drop 2
+
+    shouldWrap :: [String] -> String -> Bool
+    shouldWrap exs fn = "nc_" `isPrefixOf` fn && not (fn `elem` exs)
 
 
 ------------------------------------------------------------------------
@@ -57,7 +67,7 @@ wrapWithStdcallD (CDecl ss ds n) = do
     origFun <- fmap var (name declr)
     let origArgs = map var (funArgs declr)
     return $ CFunDef
-        (stdcall ss) declr []
+        (stdcall $ dllexport ss) declr []
         (block $ call origFun origArgs) n
   where
     -- gets the first declarator
@@ -113,10 +123,16 @@ ident nam = Ident nam 0 undefNode
 -- | Changes any declaration or definition which is marked
 -- as 'extern' to use the 'stdcall' calling convention.
 stdcall :: Data a => a -> a
-stdcall = everywhere (mkT add)
+stdcall = addAttr "stdcall"
+
+dllexport :: Data a => a -> a
+dllexport = addAttr "dllexport"
+
+addAttr :: Data a => String -> a -> a
+addAttr x = everywhere (mkT add)
   where
     add :: [CDeclSpec] -> [CDeclSpec]
-    add xs | isExtern xs = attr "stdcall" : xs
+    add xs | isExtern xs = attr x : xs
            | otherwise   = xs
 
 -- | Creates a attribute type qualification with the
