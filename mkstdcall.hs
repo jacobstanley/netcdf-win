@@ -65,7 +65,7 @@ wrapWithStdcallD (CDecl ss ds n) = do
     origFun <- fmap var (name declr)
     let origArgs = map var (funArgs declr)
     return $ CFunDef
-        (stdcall $ dllexport ss) declr []
+        (dllexport : stdcall : ss) declr []
         (block $ call origFun origArgs) n
   where
     -- gets the first declarator
@@ -118,20 +118,11 @@ ident nam = Ident nam 0 undefNode
 ------------------------------------------------------------------------
 -- Exported Functions / Calling Conventions
 
--- | Changes any declaration or definition which is marked
--- as 'extern' to use the 'stdcall' calling convention.
-stdcall :: Data a => a -> a
-stdcall = addAttr "stdcall"
+stdcall :: CDeclSpec
+stdcall = attr "stdcall"
 
-dllexport :: Data a => a -> a
-dllexport = addAttr "dllexport"
-
-addAttr :: Data a => String -> a -> a
-addAttr x = everywhere (mkT add)
-  where
-    add :: [CDeclSpec] -> [CDeclSpec]
-    add xs | isExtern xs = attr x : xs
-           | otherwise   = xs
+dllexport :: CDeclSpec
+dllexport = attr "dllexport"
 
 -- | Creates a attribute type qualification with the
 -- specified identifier.
