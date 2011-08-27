@@ -1,0 +1,19 @@
+diff --git a/liblib/Makefile.am b/liblib/Makefile.am
+index c6ab07f..0f4d7bf 100755
+--- a/liblib/Makefile.am
++++ b/liblib/Makefile.am
+@@ -19,7 +19,7 @@ libnetcdf_la_LIBADD =
+ 
+ # Turn on some extra stuff when building a DLL for windows.
+ if BUILD_DLL
+-libnetcdf_la_LDFLAGS += -no-undefined -Wl,--output-def,netcdfdll.def
++libnetcdf_la_LDFLAGS += -no-undefined -Wl,--output-def,netcdfdll.def,--kill-at
+ libnetcdf_la_CPPFLAGS += -DDLL_EXPORT
+ endif # BUILD_DLL
+ 
+@@ -53,4 +53,4 @@ endif # BUILD_CDMREMOTE
+ endif #USE_NETCDF4
+ 
+ # We need at least one source file
+-libnetcdf_la_SOURCES = stub.c 
++libnetcdf_la_SOURCES = stub.c stdcall.c

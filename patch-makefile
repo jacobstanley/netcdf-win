@@ -1,0 +1,2 @@
+#!/bin/sh
+patch ../netcdf/liblib/Makefile.am liblib-Makefile.am.patch
