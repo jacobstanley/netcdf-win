@@ -1,0 +1,2 @@
+#!/bin/sh
+runghc mkstdcall.hs ../netcdf/include/netcdf.h > ../netcdf/liblib/stdcall.c
