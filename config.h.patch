@@ -1,0 +1,17 @@
+--- a/config.h
++++ b/config.h
+@@ -365,7 +365,13 @@
+ #define SIZEOF_LONG 4
+ 
+ /* The size of `off_t', as computed by sizeof. */
+-#define SIZEOF_OFF_T 4
++#include <io.h>
++#include <process.h>
++#define SIZEOF_OFF_T 8
++#define lseek _lseeki64
++#define off_t __int64
++#define _off_t __int64
++#define _OFF_T_DEFINED
+ 
+ /* The size of `short', as computed by sizeof. */
+ #define SIZEOF_SHORT 2
