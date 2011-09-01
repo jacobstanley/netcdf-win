@@ -1,0 +1,56 @@
+#!/bin/sh
+
+if [ -z "$GIT_INSTALL" ]; then
+  GIT_INSTALL="/c/Program Files (x86)/Git"
+fi
+
+function git() {
+    PATH=$GIT_INSTALL/bin:$GIT_INSTALL/mingw/bin:$PATH git.exe $@ ;
+}
+
+if [ ! -f "liblib/Makefile.am" ]; then
+	echo "This script must be run from the netcdf root directory"
+	exit 1
+fi
+
+set -e
+
+NETCDF_WIN="$( cd "$( dirname "$0" )" && pwd )"
+
+
+# Reset to known state
+
+echo "# Resetting NetCDF repository to clean state"
+git clean -fd
+git reset --hard
+
+
+# Generate stdcall wrappers
+
+echo
+echo "# Generating stdcall wrappers"
+
+runghc $NETCDF_WIN/mkstdcall.hs \
+	--exclude=$NETCDF_WIN/netcdf.ignore \
+	include/netcdf.h > \
+	liblib/stdcall.c
+
+patch liblib/Makefile.am $NETCDF_WIN/liblib-Makefile.am.patch
+
+
+# Configure NetCDF
+
+echo
+echo "# Configuring NetCDF"
+
+autoreconf -i
+./configure --enable-dll --disable-netcdf-4
+patch config.h $NETCDF_WIN/config.h.patch
+
+
+# Build NetCDF
+
+echo
+echo "# Building NetCDF"
+
+make
