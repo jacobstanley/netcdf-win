@@ -1,13 +1,5 @@
 #!/bin/sh
 
-if [ -z "$GIT_INSTALL" ]; then
-  GIT_INSTALL="/c/Program Files (x86)/Git"
-fi
-
-function git() {
-    PATH=$GIT_INSTALL/bin:$GIT_INSTALL/mingw/bin:$PATH git.exe $@ ;
-}
-
 if [ ! -f "liblib/Makefile.am" ]; then
 	echo "This script must be run from the netcdf root directory"
 	exit 1
