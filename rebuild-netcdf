@@ -1,20 +1,19 @@
 #!/bin/sh
 
-if [ ! -f "liblib/Makefile.am" ]; then
-	echo "This script must be run from the netcdf root directory"
-	exit 1
-fi
-
 set -e
 
+NETCDF=netcdf-4.2.1.1
 NETCDF_WIN="$( cd "$( dirname "$0" )" && pwd )"
-
+BINARIES=$NETCDF_WIN/bin
 
 # Reset to known state
 
-echo "# Resetting NetCDF repository to clean state"
-git clean -fd
-git reset --hard
+echo "# Resetting NetCDF sources to clean state"
+
+cd $NETCDF_WIN
+rm -rf $NETCDF
+tar -zxvf $NETCDF.tar.gz
+cd $NETCDF
 
 
 # Generate stdcall wrappers
@@ -46,3 +45,18 @@ echo
 echo "# Building NetCDF"
 
 make
+
+# Harvest Binaries
+
+echo
+echo "# Harvesting Binaries"
+
+rm -rf $BINARIES
+mkdir $BINARIES
+
+cp include/netcdf.h             $BINARIES/netcdf.h
+cp liblib/netcdfdll.def         $BINARIES/netcdf.def
+cp liblib/.libs/libnetcdf-7.dll $BINARIES/netcdf.dll
+dlltool --input-def=$BINARIES/netcdf.def \
+        --dllname=netcdf.dll   \
+        --output-lib=$BINARIES/netcdf.lib
