@@ -1,5 +1,3 @@
-diff --git a/liblib/Makefile.am b/liblib/Makefile.am
-index c6ab07f..0f4d7bf 100755
 --- a/liblib/Makefile.am
 +++ b/liblib/Makefile.am
 @@ -19,7 +19,7 @@ libnetcdf_la_LIBADD =

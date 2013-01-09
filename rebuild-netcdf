@@ -2,18 +2,20 @@
 
 set -e
 
-NETCDF=netcdf-4.2.1.1
-NETCDF_WIN="$( cd "$( dirname "$0" )" && pwd )"
-BINARIES=$NETCDF_WIN/bin
+NETCDF_VERSION=netcdf-4.2.1.1
+
+BASE="$( cd "$( dirname "$0" )" && pwd )"
+BIN=$BASE/bin
+SRC=$BASE/$NETCDF_VERSION
 
 # Reset to known state
 
 echo "# Resetting NetCDF sources to clean state"
 
-cd $NETCDF_WIN
-rm -rf $NETCDF
-tar -zxvf $NETCDF.tar.gz
-cd $NETCDF
+cd $BASE
+rm -rf $SRC
+tar -zxvf $NETCDF_VERSION.tar.gz
+cd $SRC
 
 
 # Generate stdcall wrappers
@@ -21,12 +23,12 @@ cd $NETCDF
 echo
 echo "# Generating stdcall wrappers"
 
-runghc $NETCDF_WIN/mkstdcall.hs \
-	--exclude=$NETCDF_WIN/netcdf.ignore \
-	include/netcdf.h > \
-	liblib/stdcall.c
+runghc $BASE/mkstdcall.hs \
+	--exclude=$BASE/netcdf.ignore \
+	$SRC/include/netcdf.h > \
+	$SRC/liblib/stdcall.c
 
-patch liblib/Makefile.am $NETCDF_WIN/liblib-Makefile.am.patch
+patch $SRC/liblib/Makefile.am $BASE/liblib-Makefile.am.patch
 
 
 # Configure NetCDF
@@ -36,7 +38,10 @@ echo "# Configuring NetCDF"
 
 autoreconf -i
 ./configure --enable-dll --disable-netcdf-4
-patch config.h $NETCDF_WIN/config.h.patch
+make config.h
+
+echo patch $SRC/config.h $BASE/config.h.patch
+patch $SRC/config.h $BASE/config.h.patch
 
 
 # Build NetCDF
@@ -51,12 +56,16 @@ make
 echo
 echo "# Harvesting Binaries"
 
-rm -rf $BINARIES
-mkdir $BINARIES
+rm -rf $BIN
+mkdir $BIN
 
-cp include/netcdf.h             $BINARIES/netcdf.h
-cp liblib/netcdfdll.def         $BINARIES/netcdf.def
-cp liblib/.libs/libnetcdf-7.dll $BINARIES/netcdf.dll
-dlltool --input-def=$BINARIES/netcdf.def \
-        --dllname=netcdf.dll   \
-        --output-lib=$BINARIES/netcdf.lib
+cp $SRC/include/netcdf.h             $BIN/netcdf.h
+cp $SRC/liblib/.libs/libnetcdf-7.dll $BIN/netcdf.dll
+pexports $BIN/netcdf.dll | sed -e 's/libnetcdf-7/netcdf/' >$BIN/netcdf.def
+
+cd $BIN
+cmd //c $BASE/lib.bat //machine:i386 //def:netcdf.def //out:netcdf.lib
+
+#dlltool --input-def=$BIN/netcdf.def \
+#        --dllname=netcdf.dll        \
+#        --output-lib=$BIN/netcdf.lib

@@ -1,8 +1,8 @@
 --- a/config.h
 +++ b/config.h
 @@ -365,7 +365,13 @@
- #define SIZEOF_LONG 4
- 
+ #define SIZEOF_LONG_LONG 8
+
  /* The size of `off_t', as computed by sizeof. */
 -#define SIZEOF_OFF_T 4
 +#include <io.h>
@@ -12,6 +12,6 @@
 +#define off_t __int64
 +#define _off_t __int64
 +#define _OFF_T_DEFINED
- 
+
  /* The size of `short', as computed by sizeof. */
  #define SIZEOF_SHORT 2
